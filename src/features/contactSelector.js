@@ -9,23 +9,20 @@
  * 5. 選択結果を担当者テーブルに反映
  */
 
-import {
-  DEAL_FIELDS,
-} from '../config/fields.js';
-
+import { DEAL_FIELDS, } from '../config/fields.js';
 import {
   getContactsByCustomer,
   formatContacts,
 } from '../api/contacts.js';
 
-import {
-  showContactDialog,
-} from '../ui/dialog.js';
+import { showContactDialog, } from '../ui/dialog.js';
 
 import {
   syncProposalDetails,
   updateProposalDetailsVisibility,
 } from './proposalDetails.js';
+
+import { Button } from 'kintone-ui-component/lib/button';
 
 // ========================================
 // 1. モジュール内状態
@@ -156,15 +153,18 @@ function renderContactButton(record) {
   if (!customerId) {
     return;
   }
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'sf-contact-select-button';
-  button.textContent = '担当者を選択';
+
+  const button = new Button({
+    text: '担当者を選択',
+    type: 'submit',
+    disabled: false,
+  });
+
   button.addEventListener('click', async () => {
     if (isLoading) return;
     isLoading = true;
     button.disabled = true;
-    button.textContent = '担当者を取得中...';
+    button.text = '担当者を取得中...';
     try {
       // 担当者取得
       const records = await getContactsByCustomer(

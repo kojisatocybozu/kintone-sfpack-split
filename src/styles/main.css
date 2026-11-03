@@ -31,31 +31,3 @@
     min-width: 0;
   }
 }
-
-
-/* ========================================
-   担当者選択ボタン
-======================================== */
-
-.sf-contact-select-button {
-  display: inline-block;
-  padding: 9px 20px;
-  border: 1px solid #3498db;
-  border-radius: 5px;
-  background: #3498db;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.sf-contact-select-button:hover:not(:disabled) {
-  background: #287bb5;
-}
-
-.sf-contact-select-button:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-
