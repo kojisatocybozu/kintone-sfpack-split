@@ -1,0 +1,61 @@
+/* SFAパック カスタマイズ用スタイル */
+
+.sfpack-customization {
+  box-sizing: border-box;
+}
+
+
+/* KUC Dialog 内部のレイアウト調整 */
+
+.sf-kuc-dialog-content {
+  min-width: 420px;
+}
+
+.sf-kuc-dialog-content > p {
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+
+.sf-kuc-dialog-count {
+  font-weight: 600;
+}
+
+.sf-kuc-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 600px) {
+  .sf-kuc-dialog-content {
+    min-width: 0;
+  }
+}
+
+
+/* ========================================
+   担当者選択ボタン
+======================================== */
+
+.sf-contact-select-button {
+  display: inline-block;
+  padding: 9px 20px;
+  border: 1px solid #3498db;
+  border-radius: 5px;
+  background: #3498db;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sf-contact-select-button:hover:not(:disabled) {
+  background: #287bb5;
+}
+
+.sf-contact-select-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
