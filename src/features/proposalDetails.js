@@ -1,4 +1,3 @@
-
 /**
  * 担当者別明細管理
  *
@@ -15,30 +14,20 @@ import {
   DEAL_FIELDS,
 } from '../config/fields.js';
 
-
 // ========================================
 // 1. 現在の担当者を取得
 // ========================================
 
 function getActiveContacts(record) {
-
-  const tableCode =
-    DEAL_FIELDS.CONTACT_TABLE.TABLE;
-
-  const nameCode =
-    DEAL_FIELDS.CONTACT_TABLE.FIELDS.NAME;
-
-  const noCode =
-    DEAL_FIELDS.CONTACT_TABLE.FIELDS.CONTACT_NO;
-
+  const tableCode = DEAL_FIELDS.CONTACT_TABLE.TABLE;
+  const nameCode = DEAL_FIELDS.CONTACT_TABLE.FIELDS.NAME;
+  const noCode = DEAL_FIELDS.CONTACT_TABLE.FIELDS.CONTACT_NO;
   const rows = record[tableCode]?.value ?? [];
-
   const contacts = rows
     .map(row => ({
       contactNo: String(
         row.value[noCode]?.value ?? ''
       ).trim(),
-
       name:
         row.value[nameCode]?.value ?? '',
     }))
@@ -55,21 +44,17 @@ function getActiveContacts(record) {
       ])
     ).values(),
   ];
-
   if (uniqueContacts.length > 5) {
     throw new Error(
       '担当者は最大5名までです。'
     );
   }
-
   return uniqueContacts;
 }
-
 
 // ========================================
 // 2. 明細テーブルにデータがあるか確認
 // ========================================
-
 function hasProposalData(record, tableCode) {
 
   const rows = record[tableCode]?.value ?? [];
@@ -82,7 +67,6 @@ function hasProposalData(record, tableCode) {
     )
   );
 }
-
 
 // ========================================
 // 3. 担当者Noと明細テーブルを同期
@@ -99,62 +83,46 @@ function hasProposalData(record, tableCode) {
  */
 
 export function syncProposalDetails(record) {
-
   const slots = DEAL_FIELDS.PROPOSAL_TABLES;
-
   const activeContacts = getActiveContacts(record);
 
   // --------------------------------------
   // 既存の割り当てを取得
   // --------------------------------------
-
   const assignments = new Map();
-
   slots.forEach((slot, index) => {
-
     const ownerId = String(
       record[slot.OWNER]?.value ?? ''
     ).trim();
-
     if (ownerId !== '') {
-
       if (assignments.has(ownerId)) {
         throw new Error(
           `担当者Noが複数の明細枠に割り当てられています: ${ownerId}`
         );
       }
-
       assignments.set(ownerId, index);
-
     }
-
   });
 
   // --------------------------------------
   // 新規担当者の割り当て
   // --------------------------------------
-
   activeContacts.forEach(contact => {
-
     // 既に割り当て済みなら何もしない
     if (assignments.has(contact.contactNo)) {
       return;
     }
-
     // 未使用枠を検索
     // 管理フィールドが空でも明細データが残っている枠は再利用しない
     const availableIndex = slots.findIndex(
       (slot, index) => {
-
         const ownerId = String(
           record[slot.OWNER]?.value ?? ''
         ).trim();
-
         return (
           ownerId === '' &&
           !hasProposalData(record, slot.TABLE)
         );
-
       }
     );
 
@@ -164,17 +132,14 @@ export function syncProposalDetails(record) {
         '過去に割り当てた担当者の明細が保持されている可能性があります。'
       );
     }
-
     const slot = slots[availableIndex];
 
     // 担当者Noを保存
     record[slot.OWNER].value = contact.contactNo;
-
     assignments.set(
       contact.contactNo,
       availableIndex
     );
-
     console.log(
       '[Proposal Details] 枠を割り当てました。',
       {
@@ -183,12 +148,9 @@ export function syncProposalDetails(record) {
         table: slot.TABLE,
       }
     );
-
   });
-
   return record;
 }
-
 
 // ========================================
 // 4. 明細テーブルの表示制御
@@ -203,159 +165,143 @@ export function syncProposalDetails(record) {
  */
 
 export function updateProposalDetailsVisibility(record) {
-
   const activeContacts = getActiveContacts(record);
-
   const activeIds = new Set(
     activeContacts.map(contact =>
       contact.contactNo
     )
   );
-
   DEAL_FIELDS.PROPOSAL_TABLES.forEach(slot => {
-
     const ownerId = String(
       record[slot.OWNER]?.value ?? ''
     ).trim();
-
     const isVisible =
       ownerId !== '' &&
       activeIds.has(ownerId);
-
     // テーブル表示・非表示
     kintone.app.record.setFieldShown(
       slot.TABLE,
       isVisible
     );
-
     // 管理フィールドは常に非表示
     kintone.app.record.setFieldShown(
       slot.OWNER,
       false
     );
-
   });
-
 }
 
 
 // ========================================
 // 5. 初期表示
 // ========================================
-
 function handleShow(event) {
-
   try {
-
     syncProposalDetails(event.record);
-
     updateProposalDetailsVisibility(event.record);
-
   } catch (error) {
-
     console.error(
       '[Proposal Details] 初期化エラー',
       error
     );
-
     event.error = error.message;
-
   }
-
   return event;
 }
 
-
 // ========================================
-// 6. 担当者テーブル変更
+// 6. 詳細画面表示
 // ========================================
 
-function handleContactTableChange(event) {
+function handleDetailShow(event) {
 
   try {
-
-    syncProposalDetails(event.record);
-
+    // 表示制御のみ実行する
+    // レコードデータの変更・同期は行わない
     updateProposalDetailsVisibility(event.record);
-
   } catch (error) {
+    console.error(
+      '[Proposal Details] 詳細画面の表示制御エラー',
+      error
+    );
+  }
+  return event;
+}
 
+// ========================================
+// 7. 担当者テーブル変更
+// ========================================
+function handleContactTableChange(event) {
+  try {
+    syncProposalDetails(event.record);
+    updateProposalDetailsVisibility(event.record);
+  } catch (error) {
     console.error(
       '[Proposal Details] 同期エラー',
       error
     );
-
     event.error = error.message;
-
   }
-
   return event;
 }
 
-
 // ========================================
-// 7. 保存前の検証
+// 8. 保存前の検証
 // ========================================
-
 function handleSubmit(event) {
-
   try {
-
     syncProposalDetails(event.record);
-
   } catch (error) {
-
     console.error(
       '[Proposal Details] 保存前検証エラー',
       error
     );
-
     event.error = error.message;
-
   }
-
   return event;
 }
 
-
 // ========================================
-// 8. イベント登録
+// 9. イベント登録
 // ========================================
 
 export function initializeProposalDetails() {
-
+  // 新規登録・編集画面
   const showEvents = [
     'app.record.create.show',
     'app.record.edit.show',
   ];
-
+  // 詳細画面
+  const detailEvents = [
+    'app.record.detail.show',
+  ];
+  // 担当者テーブル変更
   const changeEvents = [
     'app.record.create.change.担当者テーブル',
     'app.record.edit.change.担当者テーブル',
   ];
-
+  // 保存前
   const submitEvents = [
     'app.record.create.submit',
     'app.record.edit.submit',
   ];
-
   kintone.events.on(
     showEvents,
     handleShow
   );
-
+  kintone.events.on(
+    detailEvents,
+    handleDetailShow
+  );
   kintone.events.on(
     changeEvents,
     handleContactTableChange
   );
-
   kintone.events.on(
     submitEvents,
     handleSubmit
   );
-
   console.log(
     '[Proposal Details] initialized'
   );
-
 }
