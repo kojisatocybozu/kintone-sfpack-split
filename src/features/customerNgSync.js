@@ -1,3 +1,5 @@
+import { Button } from 'kintone-ui-component';
+
 const CUSTOMER_APP_ID = 940;
 
 const FIELDS = {
@@ -78,22 +80,29 @@ async function getTargetRecords(honshaId) {
   return allRecords;
 }
 
-async function updateTargetRecords(records, status) {
+async function updateTargetRecords(records, status, headOfficeRecordId) {
   const BATCH_SIZE = 100;
   let updatedCount = 0;
 
-  // kintoneの複数レコード更新APIは最大100件/回
   for (let i = 0; i < records.length; i += BATCH_SIZE) {
     const batch = records.slice(i, i + BATCH_SIZE);
 
-    const requests = batch.map((record) => ({
-      id: record.$id.value,
-      record: {
-        [FIELDS.effectiveGenbaNg]: {
-          value: status,
+    const requests = batch.map((record) => {
+      const isHeadOfficeRecord =
+        String(record.$id.value) === String(headOfficeRecordId);
+
+      // 本社自身は常にOK
+      const effectiveStatus = isHeadOfficeRecord ? 'OK' : status;
+
+      return {
+        id: record.$id.value,
+        record: {
+          [FIELDS.effectiveGenbaNg]: {
+            value: effectiveStatus,
+          },
         },
-      },
-    }));
+      };
+    });
 
     await kintone.api(
       kintone.api.url('/k/v1/records.json', true),
@@ -133,8 +142,12 @@ async function syncHeadOffice(record) {
     );
   }
 
-  const updatedCount = await updateTargetRecords(targets, status);
-
+  const updatedCount = await updateTargetRecords(
+    targets,
+    status,
+    headOfficeRecordId
+  );
+  
   console.log('[Customer NG] 同期完了', {
     honshaId,
     status,
@@ -161,18 +174,19 @@ function addRetryButton(event) {
   }
 
   const header = kintone.app.record.getHeaderMenuSpaceElement();
+
   if (!header || document.getElementById(RETRY_BUTTON_ID)) {
     return event;
   }
 
-  const button = document.createElement('button');
-  button.id = RETRY_BUTTON_ID;
-  button.type = 'button';
-  button.textContent = '現場NG判定を再同期';
+  // KUC Buttonを生成
+  const button = new Button({
+    text: '現場NG判定を再同期',
+    type: 'normal',
+    disabled: false,
+  });
 
-  button.style.marginLeft = '8px';
-  button.style.padding = '8px 12px';
-  button.style.cursor = 'pointer';
+  button.id = RETRY_BUTTON_ID;
 
   button.addEventListener('click', async () => {
     const confirmed = window.confirm(
@@ -182,10 +196,9 @@ function addRetryButton(event) {
     if (!confirmed) return;
 
     button.disabled = true;
-    button.textContent = '同期中...';
+    button.text = '同期中...';
 
     try {
-      // 詳細画面の現在のレコードを使う
       const result = await syncHeadOffice(event.record);
 
       window.alert(
@@ -199,13 +212,15 @@ function addRetryButton(event) {
       showSyncError(error);
     } finally {
       button.disabled = false;
-      button.textContent = '現場NG判定を再同期';
+      button.text = '現場NG判定を再同期';
     }
   });
 
   header.appendChild(button);
+
   return event;
 }
+
 
 export function initCustomerNgSync() {
   // 誤って案件管理アプリへ登録された場合は何もしない
