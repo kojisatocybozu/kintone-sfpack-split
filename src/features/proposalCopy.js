@@ -153,7 +153,8 @@ export function initializeProposalCopy() {
 
       const button = new Button({
         text: 'テーブルコピー',
-        type: 'normal',
+        type: 'submit',
+        disable: false,
       });
 
       button.addEventListener('click', copyProposalDetails);
