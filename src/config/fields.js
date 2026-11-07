@@ -126,6 +126,18 @@ export const DEAL_FIELDS = Object.freeze({
     NEXT_ACTION_DATE: '次回アクション日',
     EXPECTED_ORDER_DATE: '受注予定日',
   },
+
+  // DEAL_FIELDS オブジェクト内に追加
+  PROPOSAL_SOURCE: {
+    TABLE: '明細テーブル',
+    FIELDS: {
+      PRODUCT: '提案商品_0',
+      PROBABILITY: '確度_0',
+      PHASE: '商談フェーズ_0',
+    },
+  },
+
+  PROPOSAL_COPY_SPACE: 'copyProposalDetails',
 });
 
 

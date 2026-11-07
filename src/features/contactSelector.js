@@ -205,7 +205,7 @@ function renderContactButton(record) {
     } finally {
       isLoading = false;
       button.disabled = false;
-      button.textContent = '担当者を選択';
+      button.text = '担当者を選択';
     }
   });
   space.appendChild(button);
