@@ -1,16 +1,27 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig({
-  build: {
-    outDir: 'dist',
-    emptyOutDir: true,
-    lib: {
-      entry: 'src/main.js',
-      name: 'SfpackCustomization',
-      formats: ['iife'],
-      fileName: () => 'sfpack-customization.js',
+export default defineConfig(({ mode }) => {
+  const isCustomer = mode === 'customer';
+
+  return {
+    build: {
+      outDir: 'dist',
+      emptyOutDir: !isCustomer,
+      lib: {
+        entry: isCustomer
+          ? 'src/customerMain.js'
+          : 'src/main.js',
+        name: isCustomer
+          ? 'CustomerCustomization'
+          : 'SfpackCustomization',
+        formats: ['iife'],
+        fileName: () =>
+          isCustomer
+            ? 'customer-customization.js'
+            : 'sfpack-customization.js',
+      },
+      minify: false,
+      sourcemap: true,
     },
-    minify: false,
-    sourcemap: true,
-  },
+  };
 });
