@@ -2,7 +2,7 @@
 (async () => {
   'use strict';
 
-  const APP_ID = 940;
+  const APP_ID = kintone.app.getId();
 
   // 安全のため、アプリ設定の反映は自動実行しません。
   const fields = {

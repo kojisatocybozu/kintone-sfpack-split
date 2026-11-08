@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
             ? 'customer-customization.js'
             : 'sfpack-customization.js',
       },
-      minify: false,
+      minify: 'oxc',
       sourcemap: true,
     },
   };
