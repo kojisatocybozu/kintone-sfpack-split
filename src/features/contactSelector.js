@@ -224,9 +224,12 @@ function handleShow(event) {
 // 7. 顧客変更イベント
 // ========================================
 function handleCustomerChange(event) {
-  const currentCustomerId = getCustomerId(
-    event.record
-  );
+  const currentCustomerId = getCustomerId(event.record);
+
+  console.log('[Contact Selector] Customer changed', {
+    customerId: currentCustomerId,
+    companyName: event.record[DEAL_FIELDS.CUSTOMER.NAME]?.value,
+  });
 
   // 顧客が変更された場合のみ担当者をクリア
   if (
@@ -246,15 +249,24 @@ function handleCustomerChange(event) {
 // ========================================
 // 8. イベント登録
 // ========================================
+
 export function initializeContactSelector() {
+
   const showEvents = [
     'app.record.create.show',
     'app.record.edit.show',
   ];
+
   const changeEvents = [
+    // 会社名（ルックアップ）の変更
     `app.record.create.change.${DEAL_FIELDS.CUSTOMER.NAME}`,
     `app.record.edit.change.${DEAL_FIELDS.CUSTOMER.NAME}`,
+
+    // ルックアップで取得される顧客Noの変更
+    `app.record.create.change.${DEAL_FIELDS.CUSTOMER.ID}`,
+    `app.record.edit.change.${DEAL_FIELDS.CUSTOMER.ID}`,
   ];
+
   kintone.events.on(showEvents, handleShow);
   kintone.events.on(changeEvents, handleCustomerChange);
 }
