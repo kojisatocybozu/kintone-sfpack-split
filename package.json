@@ -6,7 +6,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite build --watch --mode development",
-    "build": "vite build",
+    "build:deal": "vite build",
+    "build:customer": "vite build --mode customer",
+    "build": "pnpm run build:deal && pnpm run build:customer",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -2,26 +2,34 @@
 /**
  * kintone SFAパック フィールド定義
  *
- * 案件管理       : App ID 941
- * 顧客管理       : App ID 940
- * 担当者管理     : App ID 942
+ * 案件管理・顧客管理・担当者管理
+ *
+ * アプリIDは環境ごとに異なるため、固定値を持たない。
+ * 担当者管理アプリIDは環境別設定ファイルから取得する。
  *
  * フィールドコードは各アプリのJSON定義に基づく。
  */
 
 // ========================================
-// 1. アプリID
+// 1. 環境別設定の参照
 // ========================================
 
-export const APP_IDS = Object.freeze({
-  DEAL: 941,
-  CUSTOMER: 940,
-  CONTACT: 942,
-});
+// 設定値の取得は実行時に行う。
+// fields.js の読み込み時にはエラーを発生させない。
+export function getContactAppId() {
+  const appId = window.SFPACK_CONFIG?.contactAppId;
 
+  if (!Number.isInteger(appId) || appId <= 0) {
+    throw new Error(
+      '[SFA] 担当者管理アプリIDが正しく設定されていません。'
+    );
+  }
+
+  return appId;
+}
 
 // ========================================
-// 2. 案件管理アプリ（941）
+// 2. 案件管理アプリ
 // ========================================
 
 export const DEAL_FIELDS = Object.freeze({
@@ -44,13 +52,10 @@ export const DEAL_FIELDS = Object.freeze({
     FIELDS: {
       NAME: '担当者',
       CONTACT_NO: '担当者No_',
-    }, 
+    },
   },
 
-  // ========================================
   // 担当者別明細テーブル
-  // ========================================
-
   PROPOSAL_TABLES: [
     {
       SLOT: 1,
@@ -127,7 +132,7 @@ export const DEAL_FIELDS = Object.freeze({
     EXPECTED_ORDER_DATE: '受注予定日',
   },
 
-  // DEAL_FIELDS オブジェクト内に追加
+  // コピー元明細テーブル
   PROPOSAL_SOURCE: {
     TABLE: '明細テーブル',
     FIELDS: {
@@ -140,9 +145,8 @@ export const DEAL_FIELDS = Object.freeze({
   PROPOSAL_COPY_SPACE: 'copyProposalDetails',
 });
 
-
 // ========================================
-// 3. 顧客管理アプリ（940）
+// 3. 顧客管理アプリ
 // ========================================
 
 export const CUSTOMER_FIELDS = Object.freeze({
@@ -154,7 +158,11 @@ export const CUSTOMER_FIELDS = Object.freeze({
   // 担当者一覧（関連レコード一覧）
   CONTACT_LIST: {
     TABLE: '担当者一覧',
-    RELATED_APP_ID: APP_IDS.CONTACT,
+
+    // アプリIDは固定せず、必要時に取得する
+    get RELATED_APP_ID() {
+      return getContactAppId();
+    },
 
     CONDITION: {
       CUSTOMER_ID: '顧客No',
@@ -170,11 +178,19 @@ export const CUSTOMER_FIELDS = Object.freeze({
       'メールアドレス',
     ],
   },
+
+  // 本社・拠点階層管理
+  OFFICE: {
+    ID: 'office_id',
+    HEAD_OFFICE_ID: 'honsha_office_id',
+    PARENT_OFFICE_ID: 'parent_office_id',
+    GENBA_NG: 'genba_ng',
+    EFFECTIVE_GENBA_NG: 'effective_genba_ng',
+  },
 });
 
-
 // ========================================
-// 4. 担当者管理アプリ（942）
+// 4. 担当者管理アプリ
 // ========================================
 
 export const CONTACT_FIELDS = Object.freeze({
@@ -199,7 +215,6 @@ export const CONTACT_FIELDS = Object.freeze({
   EMAIL: 'メールアドレス',
 });
 
-
 // ========================================
 // 5. アプリ間の関連定義
 // ========================================
@@ -208,23 +223,16 @@ export const RELATIONS = Object.freeze({
 
   // 案件管理 → 顧客管理
   DEAL_TO_CUSTOMER: {
-    SOURCE_APP: APP_IDS.DEAL,
-    TARGET_APP: APP_IDS.CUSTOMER,
-
     SOURCE_FIELD: DEAL_FIELDS.CUSTOMER.ID,
     TARGET_FIELD: CUSTOMER_FIELDS.ID,
   },
 
   // 顧客管理 → 担当者管理
   CUSTOMER_TO_CONTACT: {
-    SOURCE_APP: APP_IDS.CUSTOMER,
-    TARGET_APP: APP_IDS.CONTACT,
-
     SOURCE_FIELD: CUSTOMER_FIELDS.ID,
     TARGET_FIELD: CONTACT_FIELDS.CUSTOMER_ID,
   },
 });
-
 
 // ========================================
 // 6. 担当者取得設定
@@ -232,7 +240,10 @@ export const RELATIONS = Object.freeze({
 
 export const CONTACT_QUERY = Object.freeze({
 
-  APP: APP_IDS.CONTACT,
+  // 実行時に環境別設定から取得する
+  get APP() {
+    return getContactAppId();
+  },
 
   // 担当者選択画面に表示する項目
   FIELDS: [
