@@ -1,4 +1,3 @@
-
 import { Button } from 'kintone-ui-component';
 import { DEAL_FIELDS } from '../config/fields.js';
 

@@ -1,12 +1,13 @@
 import { Button } from 'kintone-ui-component';
+import { CUSTOMER_FIELDS } from '../config/fields.js';
 
-const CUSTOMER_APP_ID = 940;
+const CUSTOMER_APP_ID = kintone.app.getId();
 
 const FIELDS = {
-  officeId: 'office_id',
-  honshaOfficeId: 'honsha_office_id',
-  genbaNg: 'genba_ng',
-  effectiveGenbaNg: 'effective_genba_ng',
+  officeId: CUSTOMER_FIELDS.OFFICE.ID,
+  honshaOfficeId: CUSTOMER_FIELDS.OFFICE.HEAD_OFFICE_ID,
+  genbaNg: CUSTOMER_FIELDS.OFFICE.GENBA_NG,
+  effectiveGenbaNg: CUSTOMER_FIELDS.OFFICE.EFFECTIVE_GENBA_NG,
 };
 
 const NG_OPTION = '現場NG';

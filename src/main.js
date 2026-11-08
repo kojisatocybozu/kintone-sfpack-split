@@ -1,7 +1,6 @@
 import './styles/main.css';
 
 import {
-  APP_IDS,
   DEAL_FIELDS,
   CUSTOMER_FIELDS,
   CONTACT_FIELDS,
@@ -17,7 +16,6 @@ import { initializeProposalCopy } from './features/proposalCopy.js';
   'use strict';
 
   console.log('[SFA Customization] Config loaded', {
-    APP_IDS,
     DEAL_FIELDS,
     CUSTOMER_FIELDS,
     CONTACT_FIELDS,
