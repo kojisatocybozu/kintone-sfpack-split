@@ -1,3 +1,10 @@
+/*
+* 明細テーブルコピー機能
+ *
+ * 明細テーブルを設定それた担当者ごとのテープにコピーする
+ * 
+*/
+
 import { Button } from 'kintone-ui-component';
 import { DEAL_FIELDS } from '../config/fields.js';
 
