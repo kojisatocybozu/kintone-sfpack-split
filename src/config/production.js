@@ -1,3 +1,3 @@
 window.SFPACK_CONFIG = Object.freeze({
-  contactAppId: 1202, // 運用環境のアプリ、仮のID
+  contactAppId: 946, // 運用環境の担当者管理アプリ、仮のID
 });
