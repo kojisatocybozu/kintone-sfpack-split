@@ -41,7 +41,71 @@ function getCustomerId(record) {
 // 3. 担当者テーブル初期化
 // ========================================
 function clearContactTable(record) {
+  // 担当者テーブルをクリア
   record[DEAL_FIELDS.CONTACT_TABLE.TABLE].value = [];
+
+  // 担当者別明細と担当者No.管理項目をクリア
+  for (const slot of DEAL_FIELDS.PROPOSAL_TABLES) {
+    record[slot.TABLE].value = [];
+    record[slot.OWNER].value = '';
+  }
+}
+
+// ========================================
+// 3.1 担当者テーブル初期化ボタンによる初期化
+// ========================================
+function clearContactTableManually() {
+  const current = kintone.app.record.get();
+
+  if (!current?.record) {
+    window.alert('レコード情報を取得できません。');
+    return;
+  }
+
+  const record = current.record;
+  const contactTableCode = DEAL_FIELDS.CONTACT_TABLE.TABLE;
+
+  // クリア対象がすべて存在することを事前確認
+  if (!record[contactTableCode]) {
+    window.alert('担当者テーブルが見つかりません。');
+    return;
+  }
+
+  for (const slot of DEAL_FIELDS.PROPOSAL_TABLES) {
+    if (!record[slot.TABLE] || !record[slot.OWNER]) {
+      window.alert(
+        `${slot.TABLE} または ${slot.OWNER} が見つかりません。\n` +
+        '安全のため処理を中止しました。'
+      );
+      return;
+    }
+  }
+
+  const message =
+    '担当者情報を一括初期化します。\n\n' +
+    '以下のデータが削除されます。\n' +
+    '・担当者テーブルの全行\n' +
+    '・担当者別明細01〜05の全行\n' +
+    '・明細担当者No_01〜05の値\n\n' +
+    '手入力した金額・受注日なども削除されます。\n' +
+    '共通明細テーブルは変更しません。\n\n' +
+    '実行してよろしいですか？';
+
+  if (!window.confirm(message)) {
+    return;
+  }
+
+  // 担当者テーブルをクリア
+  clearContactTable(record);
+  // 画面に反映
+  kintone.app.record.set({ record });
+  // 明細テーブルの表示を更新
+  updateProposalDetailsVisibility(record);
+  window.alert(
+    '担当者情報と担当者別明細を初期化しました。\n\n' +
+    '担当者を再選択し、必要に応じて明細をコピーしてください。\n' +
+    '変更を確定するにはレコードを保存してください。'
+  );
 }
 
 /**
@@ -177,21 +241,17 @@ function renderContactButton(record) {
         );
         return;
       }
-
       // ダイアログ表示
       const selectedContacts = await showContactDialog(
         contacts
       );
-
       // キャンセル
       if (selectedContacts === null) {
         return;
       }
-
       // 選択結果をテーブルに反映
       if (selectedContacts.length > 0) {
         addContactsToTable(selectedContacts);
-
       }
 
     } catch (error) {
@@ -209,6 +269,17 @@ function renderContactButton(record) {
     }
   });
   space.appendChild(button);
+  // 担当者テーブルクリアボタン
+  const clearButton = new Button({
+    text: '担当者テーブルクリア',
+    type: 'normal',
+    disabled: false,
+  });
+  clearButton.addEventListener(
+    'click',
+    clearContactTableManually
+  );
+  space.appendChild(clearButton);
 }
 
 // ========================================
@@ -226,23 +297,23 @@ function handleShow(event) {
 function handleCustomerChange(event) {
   const currentCustomerId = getCustomerId(event.record);
 
-  console.log('[Contact Selector] Customer changed', {
-    customerId: currentCustomerId,
-    companyName: event.record[DEAL_FIELDS.CUSTOMER.NAME]?.value,
-  });
-
-  // 顧客が変更された場合のみ担当者をクリア
-  if (
+  const customerChanged =
     previousCustomerId !== null &&
-    String(previousCustomerId) !== String(currentCustomerId)
-  ) {
+    String(previousCustomerId) !== String(currentCustomerId);
+
+  if (customerChanged) {
     clearContactTable(event.record);
+
     console.log(
-      '[Contact Selector] 顧客変更に伴い担当者をクリア'
+      '[Contact Selector] 顧客変更に伴い担当者・明細を初期化'
     );
   }
+
   previousCustomerId = currentCustomerId;
+
   renderContactButton(event.record);
+  updateProposalDetailsVisibility(event.record);
+
   return event;
 }
 
