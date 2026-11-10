@@ -55,59 +55,28 @@ export const DEAL_FIELDS = Object.freeze({
     },
   },
 
+
   // 担当者別明細テーブル
-  PROPOSAL_TABLES: [
-    {
-      SLOT: 1,
-      TABLE: '担当者別明細01',
-      OWNER: '明細担当者No_01',
+  PROPOSAL_TABLES: Array.from({ length: 5 }, (_, index) => {
+    const slot = index + 1;
+    const suffix = String(slot).padStart(2, '0');
+
+    return {
+      SLOT: slot,
+      TABLE: `担当者別明細${suffix}`,
+      OWNER: `明細担当者No_${suffix}`,
       FIELDS: {
-        PRODUCT: '提案商品_01',
-        PROBABILITY: '確度_01',
-        PHASE: '商談フェーズ_01',
+        PRODUCT: `提案商品_${suffix}`,
+        PROBABILITY: `確度_${suffix}`,
+        PHASE: `商談フェーズ_${suffix}`,
+
+        EXPECTED_AMOUNT: `見込み金額_${suffix}`,
+        ORDER_AMOUNT: `受注金額_${suffix}`,
+        EXPECTED_ORDER_DATE: `受注予定日_${suffix}`,
+        ORDER_DATE: `受注日_${suffix}`,
       },
-    },
-    {
-      SLOT: 2,
-      TABLE: '担当者別明細02',
-      OWNER: '明細担当者No_02',
-      FIELDS: {
-        PRODUCT: '提案商品_02',
-        PROBABILITY: '確度_02',
-        PHASE: '商談フェーズ_02',
-      },
-    },
-    {
-      SLOT: 3,
-      TABLE: '担当者別明細03',
-      OWNER: '明細担当者No_03',
-      FIELDS: {
-        PRODUCT: '提案商品_03',
-        PROBABILITY: '確度_03',
-        PHASE: '商談フェーズ_03',
-      },
-    },
-    {
-      SLOT: 4,
-      TABLE: '担当者別明細04',
-      OWNER: '明細担当者No_04',
-      FIELDS: {
-        PRODUCT: '提案商品_04',
-        PROBABILITY: '確度_04',
-        PHASE: '商談フェーズ_04',
-      },
-    },
-    {
-      SLOT: 5,
-      TABLE: '担当者別明細05',
-      OWNER: '明細担当者No_05',
-      FIELDS: {
-        PRODUCT: '提案商品_05',
-        PROBABILITY: '確度_05',
-        PHASE: '商談フェーズ_05',
-      },
-    },
-  ],
+    };
+  }),
 
   // 提案明細テーブル
   PROPOSAL_TABLE: {
@@ -117,6 +86,11 @@ export const DEAL_FIELDS = Object.freeze({
       PRODUCT: '提案商品_0',
       PROBABILITY: '確度_0',
       PHASE: '商談フェーズ_0',
+
+      EXPECTED_AMOUNT: '見込み金額_0',
+      ORDER_AMOUNT: '受注金額_0',
+      EXPECTED_ORDER_DATE: '受注予定日_0',
+      ORDER_DATE: '受注日_0',
     },
   },
 
@@ -139,6 +113,11 @@ export const DEAL_FIELDS = Object.freeze({
       PRODUCT: '提案商品_0',
       PROBABILITY: '確度_0',
       PHASE: '商談フェーズ_0',
+
+      EXPECTED_AMOUNT: '見込み金額_0',
+      ORDER_AMOUNT: '受注金額_0',
+      EXPECTED_ORDER_DATE: '受注予定日_0',
+      ORDER_DATE: '受注日_0',
     },
   },
 

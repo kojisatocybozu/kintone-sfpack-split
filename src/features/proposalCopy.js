@@ -21,16 +21,28 @@ function hasData(row, fields) {
 
 function createCopyRow(sourceRow, targetFields) {
   const mapping = [
-    [SOURCE.FIELDS.PRODUCT, targetFields.PRODUCT],
-    [SOURCE.FIELDS.PROBABILITY, targetFields.PROBABILITY],
-    [SOURCE.FIELDS.PHASE, targetFields.PHASE],
+    [SOURCE.FIELDS.PRODUCT, targetFields.PRODUCT, 'DROP_DOWN'],
+    [SOURCE.FIELDS.PROBABILITY, targetFields.PROBABILITY, 'DROP_DOWN'],
+    [SOURCE.FIELDS.PHASE, targetFields.PHASE, 'DROP_DOWN'],
+
+    [SOURCE.FIELDS.EXPECTED_AMOUNT, targetFields.EXPECTED_AMOUNT, 'NUMBER'],
+    [SOURCE.FIELDS.ORDER_AMOUNT, targetFields.ORDER_AMOUNT, 'NUMBER'],
+
+    [SOURCE.FIELDS.EXPECTED_ORDER_DATE, targetFields.EXPECTED_ORDER_DATE, 'DATE'],
+    [SOURCE.FIELDS.ORDER_DATE, targetFields.ORDER_DATE, 'DATE'],
   ];
 
   const value = {};
 
-  for (const [sourceCode, targetCode] of mapping) {
+  for (const [sourceCode, targetCode, type] of mapping) {
+    if (!sourceCode || !targetCode) {
+      throw new Error(
+        `コピー対象フィールドの定義が不足しています: ${type}`
+      );
+    }
+
     value[targetCode] = {
-      type: 'DROP_DOWN',
+      type,
       value: sourceRow.value[sourceCode]?.value ?? '',
     };
   }
@@ -136,6 +148,52 @@ function copyProposalDetails() {
   );
 }
 
+function clearProposalDetails() {
+  const current = kintone.app.record.get();
+
+  if (!current) {
+    return;
+  }
+
+  const record = current.record;
+
+  const targetTables = TARGETS.filter(
+    (slot) => record[slot.TABLE]
+  );
+
+  if (targetTables.length !== TARGETS.length) {
+    window.alert(
+      '一部の担当者別明細テーブルが見つかりません。\n' +
+      '安全のため、クリア処理を中止しました。'
+    );
+    return;
+  }
+
+  const message =
+    '担当者別明細01〜05をすべてクリアします。\n\n' +
+    'コピー済みの値だけでなく、手入力した金額や日付も' +
+    '削除対象になります。\n\n' +
+    '共通明細と担当者情報は変更しません。\n\n' +
+    '実行してよろしいですか？';
+
+  if (!window.confirm(message)) {
+    return;
+  }
+
+  for (const slot of targetTables) {
+    // テーブル内の既存行を削除する
+    record[slot.TABLE].value = [];
+  }
+
+  kintone.app.record.set({ record });
+
+  window.alert(
+    '担当者別明細01〜05をクリアしました。\n\n' +
+    '再コピーする場合は「テーブルコピー」を押してください。\n' +
+    '変更を確定するにはレコードを保存してください。'
+  );
+}
+
 export function initializeProposalCopy() {
   console.log('[Proposal Copy] initialized');
 
@@ -143,31 +201,32 @@ export function initializeProposalCopy() {
     ['app.record.create.show', 'app.record.edit.show'],
     (event) => {
       console.log('[Proposal Copy] show event:', event.type);
-
       const space = kintone.app.record.getSpaceElement(
         DEAL_FIELDS.PROPOSAL_COPY_SPACE
       );
-
       console.log('[Proposal Copy] space:', space);
-
       if (!space) {
         console.warn('[Proposal Copy] コピー用スペースが見つかりません');
         return event;
       }
-
       space.replaceChildren();
-
+      // 担当者別明細のコピーボタン
       const button = new Button({
         text: 'テーブルコピー',
         type: 'submit',
         disable: false,
       });
-
       button.addEventListener('click', copyProposalDetails);
       space.appendChild(button);
-
+      // 担当者別明細の一括クリアボタン
+      const clearButton = new Button({
+        text: '担当者別明細クリア',
+        type: 'normal',
+        disable: false,
+      });
+      clearButton.addEventListener('click', clearProposalDetails);
+      space.appendChild(clearButton);
       console.log('[Proposal Copy] button mounted');
-
       return event;
     }
   );
