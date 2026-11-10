@@ -11,6 +11,7 @@ import {
 import { initializeContactSelector, } from './features/contactSelector.js';
 import { initializeProposalDetails, } from './features/proposalDetails.js';
 import { initializeProposalCopy } from './features/proposalCopy.js';
+import { initializeProposalAppCopy } from './features/proposalAppCopy.js';
 
 (function () {
   'use strict';
@@ -31,6 +32,9 @@ import { initializeProposalCopy } from './features/proposalCopy.js';
 
   // テーブルコピー機能情報の初期化
   initializeProposalCopy();
+
+  // 明細管理アプリへのレコード化
+  initializeProposalAppCopy();
 
   console.log(
     '[SFA Customization] initialized'
