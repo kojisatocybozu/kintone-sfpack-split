@@ -16,6 +16,14 @@
 
 // 設定値の取得は実行時に行う。
 // fields.js の読み込み時にはエラーを発生させない。
+export function getProposalDetailAppId() {
+  const appId = window.SFPACK_CONFIG?.proposalDetailAppId;
+  if (!Number.isInteger(appId) || appId <= 0) {
+    throw new Error('[SFA] 明細管理アプリIDが正しく設定されていません。');
+  }
+  return appId;
+}
+
 export function getContactAppId() {
   const appId = window.SFPACK_CONFIG?.contactAppId;
 
@@ -33,6 +41,11 @@ export function getContactAppId() {
 // ========================================
 
 export const DEAL_FIELDS = Object.freeze({
+
+  COPY_HISTORY: {
+    LAST_AT: '最終明細コピー日時',
+    LAST_BY: '最終明細コピー実行者',
+  },
 
   // 案件管理のボタンスペース
   UI: {
