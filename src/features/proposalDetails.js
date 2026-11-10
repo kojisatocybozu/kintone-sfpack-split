@@ -108,8 +108,10 @@ export function syncProposalDetails(record) {
   // 新規担当者の割り当て
   // --------------------------------------
   activeContacts.forEach(contact => {
-    // 既に割り当て済みなら何もしない
     if (assignments.has(contact.contactNo)) {
+      const index = assignments.get(contact.contactNo);
+      const slot = slots[index];
+      record[slot.OWNER_NAME].value = contact.name;
       return;
     }
     // 未使用枠を検索
@@ -133,13 +135,10 @@ export function syncProposalDetails(record) {
       );
     }
     const slot = slots[availableIndex];
-
-    // 担当者Noを保存
     record[slot.OWNER].value = contact.contactNo;
-    assignments.set(
-      contact.contactNo,
-      availableIndex
-    );
+    record[slot.OWNER_NAME].value = contact.name;
+    assignments.set(contact.contactNo, availableIndex);
+
     console.log(
       '[Proposal Details] 枠を割り当てました。',
       {
@@ -163,34 +162,30 @@ export function syncProposalDetails(record) {
  *
  * @param {Object} record kintoneレコード
  */
-
 export function updateProposalDetailsVisibility(record) {
   const activeContacts = getActiveContacts(record);
+
   const activeIds = new Set(
     activeContacts.map(contact =>
       contact.contactNo
     )
   );
+
   DEAL_FIELDS.PROPOSAL_TABLES.forEach(slot => {
     const ownerId = String(
       record[slot.OWNER]?.value ?? ''
     ).trim();
-    const isVisible =
-      ownerId !== '' &&
-      activeIds.has(ownerId);
-    // テーブル表示・非表示
-    kintone.app.record.setFieldShown(
-      slot.TABLE,
-      isVisible
-    );
-    // 管理フィールドは常に非表示
-    kintone.app.record.setFieldShown(
-      slot.OWNER,
-      false
-    );
+
+    const isVisible = ownerId !== '' && activeIds.has(ownerId);
+
+    // 担当者別明細テーブルと担当者名を連動表示
+    kintone.app.record.setFieldShown(slot.TABLE, isVisible);
+    kintone.app.record.setFieldShown(slot.OWNER_NAME, isVisible);
+
+    // 管理用の担当者No.は常に非表示
+    kintone.app.record.setFieldShown(slot.OWNER, false);
   });
 }
-
 
 // ========================================
 // 5. 初期表示

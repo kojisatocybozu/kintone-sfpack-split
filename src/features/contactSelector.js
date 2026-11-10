@@ -41,13 +41,11 @@ function getCustomerId(record) {
 // 3. 担当者テーブル初期化
 // ========================================
 function clearContactTable(record) {
-  // 担当者テーブルをクリア
   record[DEAL_FIELDS.CONTACT_TABLE.TABLE].value = [];
-
-  // 担当者別明細と担当者No.管理項目をクリア
   for (const slot of DEAL_FIELDS.PROPOSAL_TABLES) {
     record[slot.TABLE].value = [];
     record[slot.OWNER].value = '';
+    record[slot.OWNER_NAME].value = '';
   }
 }
 

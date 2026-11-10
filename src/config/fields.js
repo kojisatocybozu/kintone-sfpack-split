@@ -65,6 +65,7 @@ export const DEAL_FIELDS = Object.freeze({
       SLOT: slot,
       TABLE: `担当者別明細${suffix}`,
       OWNER: `明細担当者No_${suffix}`,
+      OWNER_NAME: `担当者名${suffix}`,
       FIELDS: {
         PRODUCT: `提案商品_${suffix}`,
         PROBABILITY: `確度_${suffix}`,
