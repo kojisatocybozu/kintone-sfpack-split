@@ -158,6 +158,48 @@ async function syncHeadOffice(record) {
   return { honshaId, status, updatedCount };
 }
 
+// 保存前に本社の設定を参照し、新規レコード自身の判定を確定する
+async function setCreatedRecordStatus(event) {
+  const record = event.record;
+  if (isHeadOffice(record)) {
+    record[FIELDS.effectiveGenbaNg].value = 'OK';
+    console.log('[Customer NG] 新規本社の保存前判定', { status: 'OK' });
+    return event;
+  }
+
+  const honshaId = String(record[FIELDS.honshaOfficeId]?.value ?? '').trim();
+  if (!honshaId) {
+    event.error = '本社事業所IDを指定してください。現場NG判定を確定できません。';
+    return event;
+  }
+
+  try {
+    const response = await kintone.api(
+      kintone.api.url('/k/v1/records.json', true),
+      'GET',
+      {
+        app: CUSTOMER_APP_ID,
+        query: `${FIELDS.officeId} = "${escapeQueryValue(honshaId)}" and ` +
+          `${FIELDS.honshaOfficeId} = "${escapeQueryValue(honshaId)}" limit 2`,
+        fields: ['$id', FIELDS.genbaNg],
+      }
+    );
+
+    if (response.records.length !== 1) {
+      throw new Error(`本社レコードが一意に見つかりません（本社事業所ID: ${honshaId}）。`);
+    }
+
+    const status = getEffectiveStatus(response.records[0]);
+    record[FIELDS.effectiveGenbaNg].value = status;
+    console.log('[Customer NG] 新規事業所の保存前判定', { honshaId, status });
+  } catch (error) {
+    console.error('[Customer NG] 新規登録時の判定取得失敗', error);
+    event.error = `現場NG判定を確定できないため、登録を中止しました。${error.message ?? String(error)}`;
+  }
+
+  return event;
+}
+
 function showSyncError(error) {
   console.error('[Customer NG] 同期失敗', error);
 
@@ -245,7 +287,10 @@ export function initCustomerNgSync() {
     }
   );
 
-  // 本社の保存成功後に連鎖更新
+  // 新規登録時は保存前に実効NGを確定（非同期イベントの完了を待つ）
+  kintone.events.on('app.record.create.submit', setCreatedRecordStatus);
+
+  // 本社の保存成功後は、従来どおり傘下レコードへ連鎖更新
   kintone.events.on(
     [
       'app.record.create.submit.success',
@@ -256,7 +301,6 @@ export function initCustomerNgSync() {
         // 保存後のAPI更新は非同期・非トランザクション
         void syncHeadOffice(event.record).catch(showSyncError);
       }
-
       return event;
     }
   );
