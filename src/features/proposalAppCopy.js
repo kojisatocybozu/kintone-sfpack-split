@@ -1,4 +1,5 @@
 /** 担当者別明細を明細管理アプリへレコード化する。 */
+import { Button } from 'kintone-ui-component';
 import { DEAL_FIELDS, getProposalDetailAppId } from '../config/fields.js';
 
 const TARGET = Object.freeze({
@@ -133,7 +134,7 @@ async function runCopy(button, dealId) {
   if (!confirm(`${rows.length}件の明細をレコード化します。\nコピー先アプリID: ${targetAppId}\nよろしいですか？`)) return;
 
   button.disabled = true;
-  button.textContent = 'コピー中...';
+  button.text = 'コピー中...';
   try {
     const existing = await fetchExisting(targetAppId, dealId);
     const counts = await applyChanges(targetAppId, rows, existing);
@@ -154,21 +155,25 @@ async function runCopy(button, dealId) {
     alert('コピー処理が完了しませんでした。\n一部のコピー先レコードが更新されている可能性があります。\n再実行前にConsoleのエラーをご確認ください。');
   } finally {
     button.disabled = false;
-    button.textContent = '明細レコード化';
+    button.text = '明細レコード化';
   }
 }
 
 export function initializeProposalAppCopy() {
   kintone.events.on('app.record.detail.show', event => {
-    const header = kintone.app.record.getHeaderMenuSpaceElement();
-    if (!header || document.getElementById(BUTTON_ID)) return event;
-    const button = document.createElement('button');
+    const space = kintone.app.record.getSpaceElement(
+      DEAL_FIELDS.PROPOSAL_COPY_SPACE
+    );
+    if (!space || document.getElementById(BUTTON_ID)) return event;
+    const button = new Button({
+      text: '明細レコード化',
+      type: 'normal',
+      disabled: false,
+    });
     button.id = BUTTON_ID;
-    button.type = 'button';
-    button.textContent = '明細レコード化';
-    button.style.marginLeft = '8px';
+    button.style.marginLeft = '0px';
     button.addEventListener('click', () => runCopy(button, event.recordId));
-    header.appendChild(button);
+    space.appendChild(button);
     return event;
   });
   console.log('[Proposal App Copy] initialized');
