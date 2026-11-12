@@ -9,6 +9,9 @@
     "build:deal": "vite build",
     "build:customer": "vite build --mode customer",
     "build": "pnpm run build:deal && pnpm run build:customer",
+    "build:prod:deal": "vite build --mode deal-prod",
+    "build:prod:customer": "vite build --mode customer-prod",
+    "build:prod": "pnpm run build:prod:deal && pnpm run build:prod:customer",
     "test": "vitest run",
     "test:watch": "vitest"
   },
