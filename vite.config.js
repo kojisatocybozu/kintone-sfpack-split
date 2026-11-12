@@ -1,11 +1,15 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig(({ mode }) => {
-  const isCustomer = mode === 'customer';
+  const isCustomer =
+    mode === 'customer' || mode === 'customer-prod';
+
+  const isProduction =
+    mode === 'deal-prod' || mode === 'customer-prod';
 
   return {
     build: {
-      outDir: 'dist',
+      outDir: isProduction ? 'dist-prod' : 'dist',
       emptyOutDir: !isCustomer,
       lib: {
         entry: isCustomer
@@ -20,8 +24,8 @@ export default defineConfig(({ mode }) => {
             ? 'customer-customization.js'
             : 'sfpack-customization.js',
       },
-      minify: 'oxc',
-      sourcemap: true,
+      minify: isProduction,
+      sourcemap: !isProduction,
     },
   };
 });
