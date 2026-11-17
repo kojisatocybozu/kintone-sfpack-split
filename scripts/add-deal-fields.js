@@ -15,6 +15,7 @@
  * - プレビュー環境の設定を変更します。
  * - 本番環境への反映は自動実行しません。
  * - 既存フィールドは変更・削除しません。
+ * - 金額・日付24項目、担当者名5項目、コピー履歴2項目も追加します。
  * - selPerson / copyProposalDetails のスペースは別途フォームに配置してください。
  */
 
@@ -140,42 +141,37 @@
     { app: APP_ID }
   );
 
-  const existingCodes = new Set(Object.keys(currentFields.properties));
-  const targetCodes = Object.keys(properties);
-  const existingTargetCodes = targetCodes.filter(code => existingCodes.has(code));
-
-  console.log('[Setup] 既存の追加対象フィールド:', existingTargetCodes);
-  console.log('[Setup] 新規追加対象フィールド:', targetCodes.filter(code => !existingCodes.has(code)));
-
-  // 一部だけ存在する場合は、意図しない定義の混在を避けるため中断
-  if (existingTargetCodes.length > 0 && existingTargetCodes.length < targetCodes.length) {
-    throw new Error(
-      '追加対象フィールドの一部が既に存在します。安全のため処理を中断しました。' +
-      '既存フィールドを確認し、必要に応じてフォーム設定を整理してください。' +
-      JSON.stringify(existingTargetCodes)
-    );
+  // 既存テーブルがある場合は、必須の基本3列が揃っていることを確認する。
+  // 既存の一部だけがある場合も、不足するトップレベル項目だけ追加する。
+  const missingProperties = {};
+  for (const [code, definition] of Object.entries(properties)) {
+    const existing = currentFields.properties[code];
+    if (!existing) {
+      missingProperties[code] = definition;
+      continue;
+    }
+    if (existing.type !== definition.type) {
+      throw new Error(`既存フィールドの型が異なります: ${code} (${existing.type} / ${definition.type})`);
+    }
+    if (definition.type === 'SUBTABLE') {
+      for (const [childCode, child] of Object.entries(definition.fields)) {
+        const actual = existing.fields?.[childCode];
+        if (!actual || actual.type !== child.type) {
+          throw new Error(`既存テーブルの基本列が不足または型違いです: ${code} / ${childCode}`);
+        }
+      }
+    }
   }
-
-  if (existingTargetCodes.length === 0) {
-    const confirmed = window.confirm(
-      `案件管理アプリ (${APP_ID}) に${targetCodes.length}個のフィールド（テーブルを含む）を追加します。\n` +
-      '既存フィールドは変更・削除しません。\n\n実行しますか？'
-    );
-
-    if (!confirmed) {
+  const targetCodes = Object.keys(properties);
+  console.log('[Setup] 新規追加対象:', Object.keys(missingProperties));
+  if (Object.keys(missingProperties).length > 0) {
+    if (!window.confirm(`案件管理アプリ(${APP_ID})に基本フィールド ${Object.keys(missingProperties).length}件を追加しますか？`)) {
       console.log('[Setup] キャンセルしました。');
       return;
     }
-
-    await kintone.api(
-      kintone.api.url(FIELD_API, true),
-      'POST',
-      { app: APP_ID, revision: currentFields.revision, properties }
-    );
-
-    console.log('[Setup] フィールド追加完了');
-  } else {
-    console.log('[Setup] 追加対象フィールドはすべて存在します。フィールド追加をスキップします。');
+    await kintone.api(kintone.api.url(FIELD_API, true), 'POST', {
+      app: APP_ID, revision: currentFields.revision, properties: missingProperties
+    });
   }
 
   // ======================================
@@ -271,13 +267,14 @@
   // 7. レイアウト更新
   // ======================================
 
-  console.log('[Setup] レイアウトを更新します。');
-
-  await kintone.api(
-    kintone.api.url(LAYOUT_API, true),
-    'PUT',
-    { app: APP_ID, layout, revision: currentLayout.revision }
-  );
+  if (JSON.stringify(layout) !== JSON.stringify(currentLayout.layout)) {
+    console.log('[Setup] 基本テーブルのレイアウトを更新します。');
+    await kintone.api(kintone.api.url(LAYOUT_API, true), 'PUT', {
+      app: APP_ID, layout, revision: currentLayout.revision,
+    });
+  } else {
+    console.log('[Setup] 基本テーブルのレイアウトは変更不要です。');
+  }
 
   // ======================================
   // 8. 更新結果の検証
@@ -306,20 +303,112 @@
     );
   }
 
-  console.log('%c[Setup] 完了しました！', 'color:green;font-weight:bold;font-size:16px');
-  console.table({
-    appId: APP_ID,
-    topLevelFieldCount: targetCodes.length,
-    tableCount: requiredTables.length,
-    managementFieldCount: managementFields.length,
-    fieldRevision: verifyFields.revision,
-    layoutRevision: verifyLayout.revision,
-  });
-  console.log('[Setup] 追加フィールド一覧:', targetCodes);
-  console.log('[Setup] 注意：selPerson / copyProposalDetails のスペースはフォーム編集画面で別途配置してください。');
-  console.log('[Setup] フォーム配置を確認後、アプリを更新してください。');
+  // ======================================
+  // 9. 金額・日付24項目: 検証済みの1列ずつPOSTする方式を維持
+  // ======================================
+  const financialDefinitions = [
+    { label: '見込み金額', type: 'NUMBER' },
+    { label: '受注金額', type: 'NUMBER' },
+    { label: '受注予定日', type: 'DATE' },
+    { label: '受注日', type: 'DATE' },
+  ];
+  const financialTables = [
+    { code: '明細テーブル', suffix: '0' },
+    ...Array.from({ length: 5 }, (_, i) => ({
+      code: `担当者別明細${String(i + 1).padStart(2, '0')}`,
+      suffix: String(i + 1).padStart(2, '0'),
+    })),
+  ];
+  let financialState = await kintone.api(kintone.api.url(FIELD_API, true), 'GET', { app: APP_ID });
+  const financialPending = [];
+  for (const { code: tableCode, suffix } of financialTables) {
+    const table = financialState.properties[tableCode];
+    if (!table || table.type !== 'SUBTABLE') throw new Error(`サブテーブルがありません: ${tableCode}`);
+    for (const def of financialDefinitions) {
+      const code = `${def.label}_${suffix}`;
+      const existing = table.fields?.[code];
+      if (existing && existing.type !== def.type) throw new Error(`型不一致: ${tableCode} / ${code}`);
+      if (!existing) financialPending.push({ tableCode, code, ...def });
+    }
+  }
+  console.log(`[Setup] 金額・日付: 追加 ${financialPending.length}件 / 既存 ${24 - financialPending.length}件`);
+  if (financialPending.length && !window.confirm(`金額・日付 ${financialPending.length}項目を追加しますか？`)) {
+    console.log('[Setup] キャンセルしました。'); return;
+  }
+  for (const [index, item] of financialPending.entries()) {
+    const table = financialState.properties[item.tableCode];
+    const field = item.type === 'NUMBER'
+      ? { type: 'NUMBER', code: item.code, label: item.label, required: false, defaultValue: '', digit: false, unique: false }
+      : { type: 'DATE', code: item.code, label: item.label, required: false, defaultValue: '' };
+    await kintone.api(kintone.api.url(FIELD_API, true), 'POST', {
+      app: APP_ID, revision: financialState.revision,
+      properties: {
+        [item.tableCode]: {
+          type: 'SUBTABLE', code: item.tableCode, label: table.label,
+          fields: { [item.code]: field },
+        },
+      },
+    });
+    financialState = await kintone.api(kintone.api.url(FIELD_API, true), 'GET', { app: APP_ID });
+    if (financialState.properties[item.tableCode]?.fields?.[item.code]?.type !== item.type) {
+      throw new Error(`追加後の確認失敗: ${item.tableCode} / ${item.code}`);
+    }
+    console.log(`[Setup] 金額・日付 ${index + 1}/${financialPending.length}: ${item.tableCode} / ${item.code}`);
+  }
 
+  // ======================================
+  // 10. コピー履歴2項目 + 担当者名5項目（テーブル外）
+  // ======================================
+  const extraDefinitions = {
+    '最終明細コピー日時': {
+      type: 'DATETIME', code: '最終明細コピー日時', label: '最終明細コピー日時',
+      required: false, defaultNowValue: false,
+    },
+    '最終明細コピー実行者': {
+      type: 'USER_SELECT', code: '最終明細コピー実行者', label: '最終明細コピー実行者',
+      required: false,
+    },
+    ...Object.fromEntries(Array.from({ length: 5 }, (_, i) => {
+      const code = `担当者名${String(i + 1).padStart(2, '0')}`;
+      return [code, { type: 'SINGLE_LINE_TEXT', code, label: code, required: false }];
+    })),
+  };
+  const extraState = await kintone.api(kintone.api.url(FIELD_API, true), 'GET', { app: APP_ID });
+  const extraMissing = {};
+  for (const [code, def] of Object.entries(extraDefinitions)) {
+    const existing = extraState.properties[code];
+    if (existing && existing.type !== def.type) throw new Error(`型不一致: ${code}`);
+    if (!existing) extraMissing[code] = def;
+  }
+  if (Object.keys(extraMissing).length) {
+    if (!window.confirm(`コピー履歴・担当者名 ${Object.keys(extraMissing).length}項目を追加しますか？`)) {
+      console.log('[Setup] キャンセルしました。'); return;
+    }
+    await kintone.api(kintone.api.url(FIELD_API, true), 'POST', {
+      app: APP_ID, revision: extraState.revision, properties: extraMissing,
+    });
+  }
+
+  // ======================================
+  // 11. 最終確認（プレビュー設定のみ。自動デプロイしない）
+  // ======================================
+  const finalFields = await kintone.api(kintone.api.url(FIELD_API, true), 'GET', { app: APP_ID });
+  for (const [code, def] of Object.entries(extraDefinitions)) {
+    if (finalFields.properties[code]?.type !== def.type) throw new Error(`最終確認失敗: ${code}`);
+  }
+  for (const { code: tableCode, suffix } of financialTables) {
+    for (const def of financialDefinitions) {
+      const code = `${def.label}_${suffix}`;
+      if (finalFields.properties[tableCode]?.fields?.[code]?.type !== def.type) {
+        throw new Error(`最終確認失敗: ${tableCode} / ${code}`);
+      }
+    }
+  }
+  console.log('%c[Setup] 全フィールド追加・確認が完了しました。', 'color:green;font-weight:bold');
+  console.log('[Setup] 担当者名01～05・コピー履歴2項目はフォーム編集で配置してください。');
+  console.log('[Setup] selPerson / copyProposalDetails のスペースも手動で配置してください。');
+  console.log('[Setup] 配置調整後に「アプリを更新」してください（自動反映しません）。');
 })().catch(error => {
-  console.error('[Setup] フィールド追加失敗:', error);
+  console.error('[Setup] 中断しました。プレビュー設定を確認し、必要なら再実行してください。', error);
   console.error('[Setup] 詳細:', error?.response?.data ?? error);
 });
