@@ -158,9 +158,11 @@ function clearProposalDetails() {
   const record = current.record;
 
   const targetTables = TARGETS.filter(
-    (slot) => record[slot.TABLE]
+    (slot) =>
+      record[slot.TABLE] &&
+      record[slot.OWNER] &&
+      record[slot.OWNER_NAME]
   );
-
   if (targetTables.length !== TARGETS.length) {
     window.alert(
       '一部の担当者別明細テーブルが見つかりません。\n' +
@@ -173,7 +175,8 @@ function clearProposalDetails() {
     '担当者別明細01〜05をすべてクリアします。\n\n' +
     'コピー済みの値だけでなく、手入力した金額や日付も' +
     '削除対象になります。\n\n' +
-    '共通明細と担当者情報は変更しません。\n\n' +
+    '共通明細は変更しません。\n' +
+    '担当者別明細に紐づく担当者情報もクリアします。\n\n' +
     '実行してよろしいですか？';
 
   if (!window.confirm(message)) {
@@ -181,8 +184,9 @@ function clearProposalDetails() {
   }
 
   for (const slot of targetTables) {
-    // テーブル内の既存行を削除する
     record[slot.TABLE].value = [];
+    record[slot.OWNER].value = '';
+    record[slot.OWNER_NAME].value = '';
   }
 
   kintone.app.record.set({ record });
